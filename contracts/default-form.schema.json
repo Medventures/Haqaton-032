@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Лист консультации",
+  "description": "Заполнить поля только по явно высказанной информации из разговора. Неизвестные значения — null. Не делать медицинских выводов и не придумывать назначения.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "complaints": {
+      "type": ["string", "null"],
+      "title": "Жалобы",
+      "description": "Текущие жалобы пациента, их характер и выраженность. Вопрос врача сам по себе не подтверждает симптом.",
+      "x-ui": "textarea"
+    },
+    "history": {
+      "type": ["string", "null"],
+      "title": "Анамнез",
+      "description": "Когда появились симптомы, как менялись и с чем пациент связывает их начало. Сохранять длительность и отрицания.",
+      "x-ui": "textarea"
+    },
+    "allergy_status": {
+      "type": ["string", "null"],
+      "title": "Аллергические реакции",
+      "description": "present — пациент сообщил об аллергии; denied — явно отрицает; unknown — явно не знает. Если не обсуждалось, null.",
+      "enum": ["present", "denied", "unknown", null],
+      "x-enumLabels": {
+        "present": "Есть",
+        "denied": "Отрицает",
+        "unknown": "Не знает"
+      }
+    },
+    "allergy_details": {
+      "type": ["string", "null"],
+      "title": "Уточнение аллергии",
+      "description": "Названные вещества, препараты и конкретные аллергические реакции. Если аллергия отрицается или не обсуждалась, null."
+    },
+    "medications": {
+      "type": ["string", "null"],
+      "title": "Принимаемые препараты",
+      "description": "Препараты, которые пациент уже принимает. Дозировку, частоту и длительность указывать только если они произнесены. Не путать с новыми назначениями.",
+      "x-ui": "textarea"
+    },
+    "diagnosis": {
+      "type": ["string", "null"],
+      "title": "Диагноз врача",
+      "description": "Только диагноз, явно сформулированный врачом, включая его оговорки о предварительном характере. Не выводить диагноз из жалоб и не считать предположение пациента диагнозом врача.",
+      "x-ui": "textarea"
+    },
+    "recommendations": {
+      "type": ["string", "null"],
+      "title": "Рекомендации врача",
+      "description": "Только явно сформулированные врачом рекомендации и назначения. Не формировать самостоятельных рекомендаций на основе симптомов.",
+      "x-ui": "textarea"
+    }
+  },
+  "required": ["complaints", "history", "allergy_status", "allergy_details", "medications", "diagnosis", "recommendations"]
+}

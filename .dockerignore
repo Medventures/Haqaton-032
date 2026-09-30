@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+**/node_modules
+.pnpm-store
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.venv
+.local
+data
+**/data
+**/*.sqlite3*
+test-results
+external_artifacts

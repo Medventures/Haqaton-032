@@ -1,0 +1,143 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_MODE: ${APP_MODE:-live}
+      DATA_DIR: /app/data
+      ASR_PROVIDER: ${ASR_PROVIDER:-openai-compatible}
+      ASR_BASE_URL: ${ASR_BASE_URL:-http://rukk:8000/v1}
+      ASR_MODEL: ${ASR_MODEL:-asr-default}
+      ASR_LANGUAGE: ${ASR_LANGUAGE:-auto}
+      ASR_API_KEY: ${ASR_API_KEY:-}
+      ASR_CHUNK_SECONDS: ${ASR_CHUNK_SECONDS:-5}
+      LLM_PROVIDER: ${LLM_PROVIDER:-deepseek}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_RESPONSE_FORMAT: ${LLM_RESPONSE_FORMAT:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-false}
+      SPEECHMATICS_API_KEY: ${SPEECHMATICS_API_KEY:-}
+      SPEECHMATICS_URL: ${SPEECHMATICS_URL:-wss://eu.rt.speechmatics.com/v2/}
+      SPEECHMATICS_LANGUAGE: ${SPEECHMATICS_LANGUAGE:-ru}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      PROVIDER_TIMEOUT_SECONDS: ${PROVIDER_TIMEOUT_SECONDS:-60}
+      MAX_CONTEXT_CHARACTERS: ${MAX_CONTEXT_CHARACTERS:-80000}
+    volumes:
+      - consultation-data:/app/data
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+  web:
+    build:
+      context: ./frontend
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  transcriber:
+    profiles: [local-asr]
+    build:
+      context: ./transcriber
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+      WHISPER_CPU_THREADS: ${WHISPER_CPU_THREADS:-4}
+      WHISPER_BEAM_SIZE: ${WHISPER_BEAM_SIZE:-1}
+      WHISPER_DOWNLOAD_ROOT: /models
+    volumes:
+      - whisper-models:/models
+    ports:
+      - "127.0.0.1:8001:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  rukk:
+    profiles: [local-asr-rukk]
+    build:
+      context: ./transcriber
+      dockerfile: Dockerfile.rukk
+    environment:
+      ASR_ENGINE: rukk
+      RUKK_DEVICE: cpu
+      RUKK_CPU_THREADS: ${RUKK_CPU_THREADS:-6}
+      RUKK_MODEL_PATH: /models/rukk/model.pt
+      RUKK_TOKENS_PATH: /models/rukk/tokens.lst
+    volumes:
+      - ./external_artifacts:/models/rukk:ro
+    ports:
+      - "127.0.0.1:8003:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  gigaam:
+    profiles: [local-asr-gpu]
+    build:
+      context: ./transcriber
+      dockerfile: Dockerfile.gigaam
+    environment:
+      ASR_ENGINE: gigaam
+      GIGAAM_MODEL: ai-sage/GigaAM-Multilingual
+      GIGAAM_REVISION: 3905cd51c3ed4e88c8edf33f3302969ba480a327
+      GIGAAM_DEVICE: cuda
+      WHISPER_DOWNLOAD_ROOT: /models
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_XET: "1"
+      HF_HUB_DOWNLOAD_TIMEOUT: "120"
+    volumes:
+      - gigaam-models:/models
+    ports:
+      - "127.0.0.1:8002:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  ollama:
+    profiles: [local-llm]
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    restart: unless-stopped
+
+volumes:
+  consultation-data:
+  whisper-models:
+  gigaam-models:
+  ollama-models:

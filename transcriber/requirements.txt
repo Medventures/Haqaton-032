@@ -1,0 +1,7 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.34,<1
+python-multipart>=0.0.20,<1
+# faster-whisper 1.2.1 calls av.open(metadata_errors=...). PyAV 19 removed
+# that parameter; pin the tested decoder pair until the upstream API is aligned.
+faster-whisper==1.2.1
+av==16.1.0
